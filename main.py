@@ -44,68 +44,91 @@ class MainWindow(QtWidgets.QWidget):
 
         layout = QtWidgets.QVBoxLayout(self)
 
-        # Optional image
+        # Image of system
         image_label = QtWidgets.QLabel()
-        pixmap = QtGui.QPixmap("system.jpg")
+        pixmap = QtGui.QPixmap("system.png")
         if not pixmap.isNull():
             image_label.setPixmap(pixmap)
             layout.addWidget(image_label)
 
+        # Dynamic equations for reference
+        equations_label = QtWidgets.QLabel()
+        # Change font size
+        font = equations_label.font()
+        font.setPointSize(18)
+        equations_label.setFont(font)
+        # Center text
+        equations_label.setText("""
+        <b>v(t)</b> = x&#8242;(t)<br>
+        <b>a(t)</b> = x&#8243;(t) = (u(t) − kx) / m
+        """)
+        equations_label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(equations_label)
+
         '''
         SYSTEM PARAMETERS INPUT
         '''
+        # Header
+        header_label = QtWidgets.QLabel("<b>System Parameters</b>")
+        layout.addWidget(header_label)
         QLabel_mass = QtWidgets.QLabel("Mass (kg):")
         layout.addWidget(QLabel_mass)
+        # Mass input with initial value 1.0
         self.mass_input = FloatSpinBox()
+        self.mass_input.setValue(1.0)
         layout.addWidget(self.mass_input)
 
         QLabel_k = QtWidgets.QLabel("Spring Constant k (N/m):")
         layout.addWidget(QLabel_k)
         self.k_input = FloatSpinBox()
+        self.k_input.setValue(10.0)
         layout.addWidget(self.k_input)
-
-        QLabel_c = QtWidgets.QLabel("Damping Constant c (Ns/m):")
-        layout.addWidget(QLabel_c)
-        self.c_input = FloatSpinBox()
-        layout.addWidget(self.c_input)
 
         '''
         PID PARAMETERS INPUT
         '''
-        QLabel_kp = QtWidgets.QLabel("PID Proportional Gain Kp:")
+        header_pid_label = QtWidgets.QLabel("<b>PID Controller Parameters</b>")
+        layout.addWidget(header_pid_label)
+        QLabel_kp = QtWidgets.QLabel("Proportional Gain Kp:")
         layout.addWidget(QLabel_kp)
         self.kp_input = FloatSpinBox()
+        self.kp_input.setValue(10)
         layout.addWidget(self.kp_input)
 
-        QLabel_ki = QtWidgets.QLabel("PID Integral Gain Ki:")
+        QLabel_ki = QtWidgets.QLabel("Integral Gain Ki:")
         layout.addWidget(QLabel_ki)
         self.ki_input = FloatSpinBox()
+        self.ki_input.setValue(10)
         layout.addWidget(self.ki_input)
 
-        QLabel_kd = QtWidgets.QLabel("PID Derivative Gain Kd:")
+        QLabel_kd = QtWidgets.QLabel("Derivative Gain Kd:")
         layout.addWidget(QLabel_kd)
         self.kd_input = FloatSpinBox()
+        self.kd_input.setValue(10)
         layout.addWidget(self.kd_input)
 
-        '''
-        REFERENCE POSITION
-        '''
-        QLabel_r = QtWidgets.QLabel("Reference Position r (m):")
+        QLabel_r = QtWidgets.QLabel("Setpoint (m):")
         layout.addWidget(QLabel_r)
         self.r_input = FloatSpinBox()
+        self.r_input.setValue(5.0)
         layout.addWidget(self.r_input)
 
         '''
         SIMULATION INPUTS
         '''
+        # Header
+        header_sim_label = QtWidgets.QLabel("<b>Simulation Parameters</b>")
+        layout.addWidget(header_sim_label)
         QLabel_sim_time = QtWidgets.QLabel("Simulation Time (s):")
         layout.addWidget(QLabel_sim_time)
         self.sim_time_input = FloatSpinBox()
+        self.sim_time_input.setValue(10.0)
         layout.addWidget(self.sim_time_input)
 
         QLabel_dt = QtWidgets.QLabel("Time Step dt (s):")
         layout.addWidget(QLabel_dt)
         self.dt_input = FloatSpinBox()
+        self.dt_input.setValue(0.01)
         layout.addWidget(self.dt_input)
         
         # Submit button
@@ -117,24 +140,23 @@ class MainWindow(QtWidgets.QWidget):
         try:
             mass = float(self.mass_input.text())
             k = float(self.k_input.text())
-            c = float(self.c_input.text())
             kp = float(self.kp_input.text())
             ki = float(self.ki_input.text())
             kd = float(self.kd_input.text())
             r = float(self.r_input.text())
-            sim_time_text = float(self.sim_time_input.text())
-            dt_text = float(self.dt_input.text())
+            sim_time = float(self.sim_time_input.text())
+            dt = float(self.dt_input.text())
         except ValueError:
             QtWidgets.QMessageBox.critical(self, "Input error", "All fields must be valid numbers.")
             return
 
-        if mass <= 0 or k <= 0 or c < 0:
+        if mass <= 0 or k <= 0:
             QtWidgets.QMessageBox.critical(self, "Input error", "Mass and k must be > 0, c must be >= 0.")
             return
 
-        run_simulation(mass=mass, k=k, c=c, kp=kp, ki=ki, kd=kd, r=r)
+        run_simulation(mass=mass, k=k, kp=kp, ki=ki, kd=kd, r=r, sim_time=sim_time, dt=dt)
 
-def run_simulation(mass, k, c, kp, ki, kd, r):
+def run_simulation(mass, k, kp, ki, kd, r, sim_time, dt):
     # simulation parameters
     sim_time = 10.0  # total simulation time in seconds
     dt = 0.01       # time step in second
@@ -152,7 +174,7 @@ def run_simulation(mass, k, c, kp, ki, kd, r):
         error = r - pos
         u = pid.compute(error, dt)
         # system dynamics
-        acc = (u - c * vel - k * pos) / mass
+        acc = (u - k * pos) / mass
         vel += acc * dt
         pos += vel * dt
         t += dt
